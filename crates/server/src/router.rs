@@ -9,6 +9,8 @@ use axum::{
     response::IntoResponse,
     BoxError, Extension, Json, Router,
 };
+use axum::routing::get;
+use axum_prometheus::PrometheusMetricLayer;
 use lazy_static::lazy_static;
 use serde_json::json;
 use tower::{buffer::BufferLayer, limit::RateLimitLayer, ServiceBuilder};
@@ -27,6 +29,7 @@ lazy_static! {
 
 #[allow(clippy::module_name_repetitions)]
 pub struct AppRouter;
+
 impl AppRouter {
     pub fn init(services: Services) -> Router {
         let cors = CorsLayer::new()
@@ -42,6 +45,8 @@ impl AppRouter {
 
         let index = ServeDir::new("dist").not_found_service(ServeFile::new("dist/index.html"));
 
+        let (prometheus_layer, metric_handle) = PrometheusMetricLayer::pair();
+
         Router::new()
             .nest_service("/", index)
             .nest("/api/v1", api::app())
@@ -55,6 +60,8 @@ impl AppRouter {
                     .layer(BufferLayer::new(1024))
                     .layer(RateLimitLayer::new(5, Duration::from_secs(1))),
             )
+            .route("/metrics", get(|| async move { metric_handle.render() }))
+            .layer(prometheus_layer)
             .fallback(Self::handle_404)
     }
 

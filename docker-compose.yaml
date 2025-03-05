@@ -8,3 +8,13 @@ services:
       - 27017:27017
     volumes:
       - ./data:/data/db
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - 9091:9090
+    command: --config.file=/etc/prometheus/prometheus.yaml
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yaml
+    extra_hosts:
+      - "prometheus:host-gateway"

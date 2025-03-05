@@ -1,2 +1,5 @@
-imports_granularity = "Crate"
-group_imports = "One"
+#imports_granularity = "Crate" #Unstable features are only available in nightly channel. Uncheck this if you are using nightly channel only.
+#group_imports = "One" #Unstable features are only available in nightly channel. Uncheck this if you are using nightly channel only.
+max_width = 100
+use_small_heuristics = "Default"
+tab_spaces = 4

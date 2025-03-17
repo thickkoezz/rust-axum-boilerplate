@@ -46,3 +46,6 @@ logs/*
 # docker volumes
 data
 .data
+
+.vscode/
+.idea/

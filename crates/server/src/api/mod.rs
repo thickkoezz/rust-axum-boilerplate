@@ -1,13 +1,13 @@
 mod user_controller;
 
-use axum::routing::{get, Router};
+use axum::routing::{Router, get};
 
 pub async fn health() -> &'static str {
-    "🚀 Server is running! 🚀"
+  "🚀 Server is running! 🚀"
 }
 
 pub fn app() -> Router {
-    Router::new()
-        .route("/", get(health))
-        .nest("/users", user_controller::UserController::app())
+  Router::new()
+    .route("/", get(health))
+    .nest("/users", user_controller::UserController::app())
 }

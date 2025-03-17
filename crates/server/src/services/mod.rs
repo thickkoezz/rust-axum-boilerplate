@@ -8,16 +8,16 @@ use crate::services::user_service::{DynUserService, UserService};
 
 #[derive(Clone)]
 pub struct Services {
-    pub user: DynUserService,
+  pub user: DynUserService,
 }
 
 impl Services {
-    pub fn new(db: Database) -> Self {
-        info!("initializing services...");
-        let repository = Arc::new(db);
+  pub fn new(db: Database) -> Self {
+    info!("initializing services...");
+    let repository = Arc::new(db);
 
-        let user = Arc::new(UserService::new(repository.clone())) as DynUserService;
+    let user = Arc::new(UserService::new(repository.clone())) as DynUserService;
 
-        Self { user }
-    }
+    Self { user }
+  }
 }

@@ -16,13 +16,13 @@ use utils::AppConfig;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
-    dotenv().ok();
+  dotenv().ok();
 
-    let config = Arc::new(AppConfig::parse());
+  let config = Arc::new(AppConfig::parse());
 
-    ApplicationServer::serve(config)
-        .await
-        .context("Failed to start server")?;
+  ApplicationServer::serve(config)
+    .await
+    .context("Failed to start server")?;
 
-    Ok(())
+  Ok(())
 }

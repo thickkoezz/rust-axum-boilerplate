@@ -14,57 +14,57 @@ pub type DynUserService = Arc<dyn UserServiceTrait + Send + Sync>;
 #[async_trait]
 #[allow(clippy::module_name_repetitions)]
 pub trait UserServiceTrait {
-    // async fn get_current_user(&self, user_id: &str) -> AppResult<Option<User>>;
+  // async fn get_current_user(&self, user_id: &str) -> AppResult<Option<User>>;
 
-    async fn get_all_users(&self) -> AppResult<Vec<User>>;
+  async fn get_all_users(&self) -> AppResult<Vec<User>>;
 
-    async fn signup_user(&self, request: SignUpUserDto) -> AppResult<InsertOneResult>;
+  async fn signup_user(&self, request: SignUpUserDto) -> AppResult<InsertOneResult>;
 }
 
 #[derive(Clone)]
 pub struct UserService {
-    repository: DynUserRepository,
+  repository: DynUserRepository,
 }
 
 impl UserService {
-    pub fn new(repository: DynUserRepository) -> Self {
-        Self { repository }
-    }
+  pub fn new(repository: DynUserRepository) -> Self {
+    Self { repository }
+  }
 }
 
 #[async_trait]
 impl UserServiceTrait for UserService {
-    async fn signup_user(&self, request: SignUpUserDto) -> AppResult<InsertOneResult> {
-        let email = request.email.unwrap();
-        let name = request.name.unwrap();
-        let password = request.password.unwrap();
+  async fn signup_user(&self, request: SignUpUserDto) -> AppResult<InsertOneResult> {
+    let email = request.email.unwrap();
+    let name = request.name.unwrap();
+    let password = request.password.unwrap();
 
-        let existing_user = self.repository.get_user_by_email(&email).await?;
+    let existing_user = self.repository.get_user_by_email(&email).await?;
 
-        if existing_user.is_some() {
-            error!("user {:?} already exists", email);
-            return Err(AppError::Conflict(format!("email {email} is taken")));
-        }
-
-        let new_user = self
-            .repository
-            .create_user(&name, &email, &password)
-            .await?;
-
-        info!("created user {:?}", new_user);
-
-        Ok(new_user)
+    if existing_user.is_some() {
+      error!("user {:?} already exists", email);
+      return Err(AppError::Conflict(format!("email {email} is taken")));
     }
 
-    // async fn get_current_user(&self, user_id: &str) -> AppResult<Option<User>> {
-    //     let user = self.repository.get_user_by_id(user_id).await?;
+    let new_user = self
+      .repository
+      .create_user(&name, &email, &password)
+      .await?;
 
-    //     Ok(user)
-    // }
+    info!("created user {:?}", new_user);
 
-    async fn get_all_users(&self) -> AppResult<Vec<User>> {
-        let users = self.repository.get_all_users().await?;
+    Ok(new_user)
+  }
 
-        Ok(users)
-    }
+  // async fn get_current_user(&self, user_id: &str) -> AppResult<Option<User>> {
+  //     let user = self.repository.get_user_by_id(user_id).await?;
+
+  //     Ok(user)
+  // }
+
+  async fn get_all_users(&self) -> AppResult<Vec<User>> {
+    let users = self.repository.get_all_users().await?;
+
+    Ok(users)
+  }
 }

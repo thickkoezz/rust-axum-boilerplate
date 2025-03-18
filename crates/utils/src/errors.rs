@@ -73,7 +73,7 @@ pub enum AppError {
 
 impl AppError {
   #[must_use]
-  /// Maps `validator`'s `ValidationrErrors` to a simple map of property name/error messages structure.
+  /// Maps `validator`'s `ValidationErrors` to a simple map of property name/error messages structure.
   pub fn unprocessable_entity(errors: ValidationErrors) -> Response {
     let mut validation_errors = ErrorMap::new();
 

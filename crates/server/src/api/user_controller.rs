@@ -13,6 +13,7 @@ use crate::{
 };
 
 pub struct UserController;
+
 impl UserController {
   pub fn app() -> Router {
     Router::new()

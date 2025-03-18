@@ -10,6 +10,7 @@ use crate::services::Services;
 use crate::{logger::Logger, router::AppRouter};
 
 pub struct ApplicationServer;
+
 impl ApplicationServer {
   pub async fn serve(config: Arc<AppConfig>) -> anyhow::Result<()> {
     let _guard = Logger::init(config.cargo_env);

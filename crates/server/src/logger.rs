@@ -4,6 +4,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use utils::CargoEnv;
 
 pub struct Logger;
+
 impl Logger {
   pub fn init(cargo_env: CargoEnv) -> WorkerGuard {
     let (non_blocking, guard) = match cargo_env {

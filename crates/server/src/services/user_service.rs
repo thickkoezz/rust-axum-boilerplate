@@ -38,6 +38,7 @@ impl UserServiceTrait for UserService {
     let email = request.email.unwrap();
     let name = request.name.unwrap();
     let password = request.password.unwrap();
+    let password = utils::hash_password(&password)?;
 
     let existing_user = self.repository.get_user_by_email(&email).await?;
 

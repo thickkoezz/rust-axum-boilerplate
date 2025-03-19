@@ -48,21 +48,18 @@ impl UserRepositoryTrait for Database {
     password: &str,
   ) -> AppResult<InsertOneResult> {
     let new_doc = User {
-      id: None,
+      id: Some(ObjectId::new()),
       name: name.to_string(),
       email: email.to_string(),
       password: password.to_string(),
     };
-
     let user = self.user_col.insert_one(new_doc).await?;
-
     Ok(user)
   }
 
   async fn get_user_by_email(&self, email: &str) -> AppResult<Option<User>> {
     let filter = doc! {"email": email};
     let user_detail = self.user_col.find_one(filter).await?;
-
     Ok(user_detail)
   }
 
@@ -70,7 +67,6 @@ impl UserRepositoryTrait for Database {
     let obj_id = ObjectId::parse_str(id)?;
     let filter = doc! {"_id": obj_id};
     let user_detail = self.user_col.find_one(filter).await?;
-
     Ok(user_detail)
   }
 
@@ -84,16 +80,14 @@ impl UserRepositoryTrait for Database {
     let id = ObjectId::parse_str(id)?;
     let filter = doc! {"_id": id};
     let new_doc = doc! {
-        "$set":
-            {
-                "name": name,
-                "email": email,
-                "password": password,
-            },
+      "$set": {
+        "name": name,
+        "email": email,
+        "password": password,
+      },
     };
 
     let updated_doc = self.user_col.update_one(filter, new_doc).await?;
-
     Ok(updated_doc)
   }
 
@@ -101,7 +95,6 @@ impl UserRepositoryTrait for Database {
     let obj_id = ObjectId::parse_str(id)?;
     let filter = doc! {"_id": obj_id};
     let user_detail = self.user_col.delete_one(filter).await?;
-
     Ok(user_detail)
   }
 
@@ -113,7 +106,6 @@ impl UserRepositoryTrait for Database {
     while let Some(doc) = cursor.next().await {
       users.push(doc?);
     }
-
     Ok(users)
   }
 }

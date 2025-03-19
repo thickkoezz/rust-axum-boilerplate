@@ -9,7 +9,6 @@ use utils::AppConfig;
 #[derive(Clone)]
 pub struct Services {
   pub user: DynUserService,
-  pub config: Arc<AppConfig>,
 }
 
 impl Services {
@@ -17,8 +16,8 @@ impl Services {
     info!("initializing services...");
     let repository = Arc::new(db);
 
-    let user = Arc::new(UserService::new(repository.clone())) as DynUserService;
+    let user = Arc::new(UserService::new(repository.clone(), config.clone())) as DynUserService;
 
-    Self { user, config }
+    Self { user }
   }
 }

@@ -8,7 +8,8 @@ use axum::{
   Extension, Json, Router,
   routing::{get, post},
 };
-
+use axum_extra::TypedHeader;
+use axum_extra::headers::Cookie;
 use database::user::model::User;
 use mongodb::results::InsertOneResult;
 use utils::AppResult;
@@ -23,8 +24,12 @@ impl UserController {
       .route("/login", post(Self::login))
   }
 
-  pub async fn all(Extension(services): Extension<Services>) -> AppResult<Json<Vec<User>>> {
-    let users = services.user.get_all_users().await?;
+  pub async fn all(
+    Extension(services): Extension<Services>,
+    TypedHeader(cookie): TypedHeader<Cookie>,
+  ) -> AppResult<Json<Vec<User>>> {
+    let users = services.user.get_all_users(services.config, cookie).await?;
+
     Ok(Json(users))
   }
 
@@ -41,9 +46,13 @@ impl UserController {
     Extension(services): Extension<Services>,
     ValidationExtractor(req): ValidationExtractor<LoginInDto>,
   ) -> AppResult<impl IntoResponse> {
-    let odata = services.user.login_user(services.config, req).await?;
+    let (odata, cookie) = services.user.login_user(services.config, req).await?;
 
-    let response = Json(odata).into_response();
+    let mut response = Json(odata).into_response();
+    response.headers_mut().insert(
+      axum::http::header::SET_COOKIE,
+      cookie.to_string().parse().unwrap(),
+    );
 
     Ok(response)
   }

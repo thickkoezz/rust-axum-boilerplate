@@ -1,12 +1,13 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use axum_extra::headers::Cookie;
 use database::user::{model::User, repository::DynUserRepository};
 use mongodb::results::InsertOneResult;
 use tracing::{error, info};
 use utils::{
-  AppConfig, AppError, AppResult,
-  jwt::create_token,
+  AppConfig, AppError, AppResult, cookie,
+  jwt::{create_token, decode_token},
   password::{hash_password, verify_password},
 };
 
@@ -20,12 +21,15 @@ pub type DynUserService = Arc<dyn UserServiceTrait + Send + Sync>;
 pub trait UserServiceTrait {
   // async fn get_current_user(&self, user_id: &str) -> AppResult<Option<User>>;
 
-  async fn get_all_users(&self) -> AppResult<Vec<User>>;
+  async fn get_all_users(&self, config: Arc<AppConfig>, cookie: Cookie) -> AppResult<Vec<User>>;
 
   async fn signup_user(&self, request: SignUpUserDto) -> AppResult<InsertOneResult>;
 
-  async fn login_user(&self, config: Arc<AppConfig>, request: LoginInDto)
-  -> AppResult<LoginOutDto>;
+  async fn login_user(
+    &self,
+    config: Arc<AppConfig>,
+    request: LoginInDto,
+  ) -> AppResult<(LoginOutDto, cookie::Cookie)>;
 }
 
 #[derive(Clone)]
@@ -41,10 +45,19 @@ impl UserService {
 
 #[async_trait]
 impl UserServiceTrait for UserService {
-  async fn get_all_users(&self) -> AppResult<Vec<User>> {
-    let users = self.repository.get_all_users().await?;
+  async fn get_all_users(&self, config: Arc<AppConfig>, cookie: Cookie) -> AppResult<Vec<User>> {
+    if let Some(jwt_token) = cookie.get("jwt_token") {
+      if decode_token(&jwt_token, &config.jwt_secret).is_err() {
+        error!("can't decode token");
+        return Err(AppError::Unauthorized);
+      }
 
-    Ok(users)
+      let users = self.repository.get_all_users().await?;
+      return Ok(users);
+    }
+
+    error!("token not found in cookie");
+    Err(AppError::Unauthorized)
   }
 
   async fn signup_user(&self, request: SignUpUserDto) -> AppResult<InsertOneResult> {
@@ -74,7 +87,7 @@ impl UserServiceTrait for UserService {
     &self,
     config: Arc<AppConfig>,
     request: LoginInDto,
-  ) -> AppResult<LoginOutDto> {
+  ) -> AppResult<(LoginOutDto, cookie::Cookie)> {
     let email = request.email.unwrap();
     let password = request.password.unwrap();
 
@@ -103,9 +116,11 @@ impl UserServiceTrait for UserService {
       exp,
     };
 
+    let cookie = cookie::create(token);
+
     info!("user {:?} logged in", email);
 
-    Ok(odata)
+    Ok((odata, cookie))
   }
 
   // async fn get_current_user(&self, user_id: &str) -> AppResult<Option<User>> {

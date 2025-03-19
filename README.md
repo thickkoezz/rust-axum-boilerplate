@@ -13,12 +13,12 @@ This project is a boilerplate for building a Rust application server using the [
 - [x] Extractors: Validation extractor for getting data from requests and validate with `validator` crate.
 - [x] App config (dotenvy): Load your application's configuration from a `.env` file.
 - [x] Server Metrics with Prometheus using `axum-prometheus`. If you run in localhost, you can access the dashboard at [localhost:9091](http://localhost:9091).
+- [x] Hashing: Password hashing
+- [x] JWT utils: Utilities for working with JWTs.
+- [x] Authentication: User authentication system.
 
 ## Possible Planned Features
-
-- Authentication: User authentication system.
-- Hashing: Password hashing
-- Jwt utils: Utilities for working with JWTs.
+- [ ] Tests: Add tests for the application.
 
 ## Project Structure
 

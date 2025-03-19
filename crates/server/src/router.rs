@@ -14,10 +14,10 @@ use axum_prometheus::PrometheusMetricLayer;
 use lazy_static::lazy_static;
 use serde_json::json;
 use tower::{ServiceBuilder, buffer::BufferLayer, limit::RateLimitLayer};
-use tower_http::trace::TraceLayer;
 use tower_http::{
   cors::{Any, CorsLayer},
   services::{ServeDir, ServeFile},
+  trace::TraceLayer,
 };
 
 use super::services::Services;

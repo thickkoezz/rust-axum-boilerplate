@@ -1,5 +1,4 @@
-use argon2::password_hash::SaltString;
-use argon2::{Argon2, PasswordHash};
+use argon2::{Argon2, PasswordHash, password_hash::SaltString};
 
 pub fn verify_password(password: &str, password_hash: &str) -> anyhow::Result<()> {
   let hash = PasswordHash::new(&password_hash)

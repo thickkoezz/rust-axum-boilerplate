@@ -3,13 +3,12 @@ use crate::{
   extractors::validation_extractor::ValidationExtractor,
   services::Services,
 };
-use axum::response::IntoResponse;
 use axum::{
   Extension, Json, Router,
+  response::IntoResponse,
   routing::{get, post},
 };
-use axum_extra::TypedHeader;
-use axum_extra::headers::Cookie;
+use axum_extra::{TypedHeader, headers::Cookie};
 use database::user::model::User;
 use mongodb::results::InsertOneResult;
 use utils::AppResult;

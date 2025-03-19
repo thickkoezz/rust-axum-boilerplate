@@ -27,7 +27,7 @@ impl ApplicationServer {
     info!("server has launched on {local_addr} 🚀");
 
     let db = Database::new(config.clone()).await?;
-    let services = Services::new(db);
+    let services = Services::new(db, config);
     let router = AppRouter::init(services);
 
     serve(tcp_listener, router)

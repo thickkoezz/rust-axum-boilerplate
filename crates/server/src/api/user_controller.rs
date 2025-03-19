@@ -1,3 +1,9 @@
+use crate::{
+  dtos::user_dto::{LoginInDto, SignUpUserDto},
+  extractors::validation_extractor::ValidationExtractor,
+  services::Services,
+};
+use axum::response::IntoResponse;
 use axum::{
   Extension, Json, Router,
   routing::{get, post},
@@ -7,11 +13,6 @@ use database::user::model::User;
 use mongodb::results::InsertOneResult;
 use utils::AppResult;
 
-use crate::{
-  dtos::user_dto::SignUpUserDto, extractors::validation_extractor::ValidationExtractor,
-  services::Services,
-};
-
 pub struct UserController;
 
 impl UserController {
@@ -19,6 +20,7 @@ impl UserController {
     Router::new()
       .route("/", get(Self::all))
       .route("/signup", post(Self::signup))
+      .route("/login", post(Self::login))
   }
 
   pub async fn all(Extension(services): Extension<Services>) -> AppResult<Json<Vec<User>>> {
@@ -33,5 +35,16 @@ impl UserController {
     let created_user = services.user.signup_user(req).await?;
 
     Ok(Json(created_user))
+  }
+
+  pub async fn login(
+    Extension(services): Extension<Services>,
+    ValidationExtractor(req): ValidationExtractor<LoginInDto>,
+  ) -> AppResult<impl IntoResponse> {
+    let odata = services.user.login_user(services.config, req).await?;
+
+    let response = Json(odata).into_response();
+
+    Ok(response)
   }
 }

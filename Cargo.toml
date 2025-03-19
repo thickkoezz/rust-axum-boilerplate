@@ -11,6 +11,7 @@ async-trait = "0.1.81"
 axum = { version = "0.7.7", features = ["macros"] }
 clap = { version = "4.5.9", features = ["env", "derive"] }
 dotenvy = "0.15.7"
+jsonwebtoken = "9.3.1"
 lazy_static = "1.5.0"
 mongodb = { version = "3.0.1" }
 pbkdf2 = "0.12.2"

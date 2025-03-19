@@ -21,4 +21,10 @@ pub struct AppConfig {
 
   #[clap(long, env)]
   pub mongo_db: String,
+
+  #[clap(long, env)]
+  pub jwt_secret: String,
+
+  #[clap(long, env, default_value = "3600")]
+  pub jwt_expiration: u16,
 }

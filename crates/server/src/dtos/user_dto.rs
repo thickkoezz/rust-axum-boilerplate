@@ -11,3 +11,19 @@ pub struct SignUpUserDto {
   #[validate(required, length(min = 6))]
   pub password: Option<String>,
 }
+
+#[derive(Clone, Deserialize, Debug, Validate, Default)]
+#[allow(clippy::module_name_repetitions)]
+pub struct LoginInDto {
+  #[validate(required, email(message = "email is invalid"))]
+  pub email: Option<String>,
+  #[validate(required)]
+  pub password: Option<String>,
+}
+
+#[derive(Clone, Serialize, Debug, Validate, Default)]
+pub struct LoginOutDto {
+  pub email: String,
+  pub token: String,
+  pub exp: i64,
+}

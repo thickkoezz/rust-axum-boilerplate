@@ -1,8 +1,10 @@
-use crate::dtos::user_dto::{LoginInDto, LoginOutDto, SignUpUserDto};
+use crate::dtos::user_dto::{
+  ChangePasswordDto, LoginInDto, LoginOutDto, SignUpUserDto, UpdateUserDto,
+};
 use async_trait::async_trait;
 use axum_extra::headers::Cookie;
 use database::user::{model::User, repository::DynUserRepository};
-use mongodb::results::{DeleteResult, InsertOneResult};
+use mongodb::results::{DeleteResult, InsertOneResult, UpdateResult};
 use std::sync::Arc;
 use tracing::{error, info};
 use utils::{
@@ -26,6 +28,14 @@ pub trait UserServiceTrait {
   async fn get_user_by_id(&self, cookie: Cookie, user_id: &str) -> AppResult<Option<User>>;
 
   async fn get_user_by_email(&self, cookie: Cookie, user_id: &str) -> AppResult<Option<User>>;
+
+  async fn update_user(&self, cookie: Cookie, request: UpdateUserDto) -> AppResult<UpdateResult>;
+
+  async fn change_password(
+    &self,
+    cookie: Cookie,
+    request: ChangePasswordDto,
+  ) -> AppResult<UpdateResult>;
 
   async fn delete_user(&self, cookie: Cookie, user_id: &str) -> AppResult<DeleteResult>;
 }
@@ -56,12 +66,12 @@ impl UserServiceTrait for UserService {
       return Err(AppError::Conflict(format!("email {email} is taken")));
     }
 
-    let new_user = self
+    let result = self
       .repository
       .create_user(&name, &email, &password)
       .await?;
-    info!("created user {:?}", new_user);
-    Ok(new_user)
+    info!("created user {:?}", result);
+    Ok(result)
   }
 
   async fn login_user(&self, request: LoginInDto) -> AppResult<(LoginOutDto, cookie::Cookie)> {
@@ -78,6 +88,8 @@ impl UserServiceTrait for UserService {
     }
 
     let user = existing_user.unwrap();
+    println!("password: {:?}", &password);
+    println!("user.password: {:?}", &user);
     if verify_password(&password, &user.password).is_err() {
       error!("invalid password for user {:?}", email);
       return Err(AppError::Unauthorized);
@@ -144,6 +156,59 @@ impl UserServiceTrait for UserService {
     Err(AppError::Unauthorized)
   }
 
+  async fn update_user(&self, cookie: Cookie, request: UpdateUserDto) -> AppResult<UpdateResult> {
+    if let Some(jwt_token) = cookie.get("jwt_token") {
+      if decode_token(&jwt_token, &self.config.jwt_secret).is_err() {
+        error!("can't decode token");
+        return Err(AppError::Unauthorized);
+      }
+
+      let id = request.id.unwrap();
+      let email = request.email.unwrap();
+      let name = request.name.unwrap();
+
+      let existing_user = self.repository.get_user_by_email(&email).await?;
+      if existing_user.is_some() {
+        let existing_id = existing_user.unwrap().id.unwrap().to_hex();
+        if existing_id != id {
+          error!("user {:?} already exists", email);
+          return Err(AppError::Conflict(format!("email {email} is taken")));
+        }
+      }
+
+      let result = self.repository.update_user(&id, &name, &email).await?;
+      info!("updated user {:?}", result);
+      return Ok(result);
+    }
+
+    error!("token not found in cookie");
+    Err(AppError::Unauthorized)
+  }
+
+  async fn change_password(
+    &self,
+    cookie: Cookie,
+    request: ChangePasswordDto,
+  ) -> AppResult<UpdateResult> {
+    if let Some(jwt_token) = cookie.get("jwt_token") {
+      if decode_token(&jwt_token, &self.config.jwt_secret).is_err() {
+        error!("can't decode token");
+        return Err(AppError::Unauthorized);
+      }
+
+      let id = request.id.unwrap();
+      let password = request.password.unwrap();
+      let password = hash_password(&password)?;
+
+      let result = self.repository.change_password(&id, &password).await?;
+      info!("updated user {:?}", result);
+      return Ok(result);
+    }
+
+    error!("token not found in cookie");
+    Err(AppError::Unauthorized)
+  }
+
   async fn delete_user(&self, cookie: Cookie, user_id: &str) -> AppResult<DeleteResult> {
     if let Some(jwt_token) = cookie.get("jwt_token") {
       if decode_token(&jwt_token, &self.config.jwt_secret).is_err() {
@@ -151,8 +216,8 @@ impl UserServiceTrait for UserService {
         return Err(AppError::Unauthorized);
       }
 
-      let user = self.repository.delete_user(user_id).await?;
-      return Ok(user);
+      let result = self.repository.delete_user(user_id).await?;
+      return Ok(result);
     }
 
     error!("token not found in cookie");

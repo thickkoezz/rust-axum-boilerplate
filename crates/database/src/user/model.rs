@@ -11,6 +11,5 @@ pub struct User {
   #[validate(length(min = 1), email(message = "email is invalid"))]
   pub email: String,
   #[validate(length(min = 6))]
-  #[serde(skip_deserializing)]
   pub password: String,
 }

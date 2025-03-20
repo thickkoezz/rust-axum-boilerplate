@@ -1,17 +1,20 @@
+use crate::dtos::user_dto::ChangePasswordDto;
 use crate::{
-  dtos::user_dto::{LoginInDto, SignUpUserDto},
+  dtos::{
+    EmailOnlyDto, IdOnlyDto,
+    user_dto::{LoginInDto, SignUpUserDto, UpdateUserDto, UserResponse},
+  },
   extractors::validation_extractor::ValidationExtractor,
   services::Services,
 };
-use axum::extract::Path;
 use axum::{
   Extension, Json, Router,
   response::IntoResponse,
-  routing::{delete, get, post},
+  routing::{delete, get, post, put},
 };
 use axum_extra::{TypedHeader, headers::Cookie};
 use database::user::model::User;
-use mongodb::results::{DeleteResult, InsertOneResult};
+use mongodb::results::{DeleteResult, InsertOneResult, UpdateResult};
 use utils::AppResult;
 
 pub struct UserController;
@@ -19,12 +22,14 @@ pub struct UserController;
 impl UserController {
   pub fn app() -> Router {
     Router::new()
-      .route("/", get(Self::all))
       .route("/signup", post(Self::signup))
       .route("/login", post(Self::login))
-      .route("/get/:user_id", get(Self::get_by_id))
-      .route("/get/email/:email", get(Self::get_by_email))
-      .route("/delete/:user_id", delete(Self::delete))
+      .route("/", get(Self::all))
+      .route("/get", get(Self::get_by_id))
+      .route("/get/:email", get(Self::get_by_email))
+      .route("/update", put(Self::update))
+      .route("/change-password", put(Self::change_password))
+      .route("/delete", delete(Self::delete))
   }
 
   pub async fn signup(
@@ -51,35 +56,57 @@ impl UserController {
   pub async fn all(
     Extension(services): Extension<Services>,
     TypedHeader(cookie): TypedHeader<Cookie>,
-  ) -> AppResult<Json<Vec<User>>> {
+  ) -> AppResult<Json<Vec<UserResponse>>> {
     let users = services.user.get_all_users(cookie).await?;
-    Ok(Json(users))
+    let users2: Vec<UserResponse> = users.into_iter().map(|u| UserResponse::from(u)).collect();
+    Ok(Json(users2))
   }
 
   pub async fn get_by_id(
     Extension(services): Extension<Services>,
     TypedHeader(cookie): TypedHeader<Cookie>,
-    Path(user_id): Path<String>,
+    ValidationExtractor(req): ValidationExtractor<IdOnlyDto>,
   ) -> AppResult<Json<Option<User>>> {
-    let user = services.user.get_user_by_id(cookie, &user_id).await?;
+    let id = req.id.unwrap();
+    let user = services.user.get_user_by_id(cookie, &id).await?;
     Ok(Json(user))
   }
 
   pub async fn get_by_email(
     Extension(services): Extension<Services>,
     TypedHeader(cookie): TypedHeader<Cookie>,
-    Path(email): Path<String>,
+    ValidationExtractor(req): ValidationExtractor<EmailOnlyDto>,
   ) -> AppResult<Json<Option<User>>> {
+    let email = req.email.unwrap();
     let user = services.user.get_user_by_email(cookie, &email).await?;
     Ok(Json(user))
+  }
+
+  pub async fn update(
+    Extension(services): Extension<Services>,
+    TypedHeader(cookie): TypedHeader<Cookie>,
+    ValidationExtractor(req): ValidationExtractor<UpdateUserDto>,
+  ) -> AppResult<Json<UpdateResult>> {
+    let result = services.user.update_user(cookie, req).await?;
+    Ok(Json(result))
+  }
+
+  pub async fn change_password(
+    Extension(services): Extension<Services>,
+    TypedHeader(cookie): TypedHeader<Cookie>,
+    ValidationExtractor(req): ValidationExtractor<ChangePasswordDto>,
+  ) -> AppResult<Json<UpdateResult>> {
+    let result = services.user.change_password(cookie, req).await?;
+    Ok(Json(result))
   }
 
   pub async fn delete(
     Extension(services): Extension<Services>,
     TypedHeader(cookie): TypedHeader<Cookie>,
-    Path(user_id): Path<String>,
+    ValidationExtractor(req): ValidationExtractor<IdOnlyDto>,
   ) -> AppResult<Json<DeleteResult>> {
-    let result = services.user.delete_user(cookie, &user_id).await?;
+    let id = req.id.unwrap();
+    let result = services.user.delete_user(cookie, &id).await?;
     Ok(Json(result))
   }
 }

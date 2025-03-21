@@ -23,13 +23,6 @@ pub struct LoginInDto {
   pub password: Option<String>,
 }
 
-#[derive(Clone, Serialize, Debug, Validate, Default)]
-pub struct LoginOutDto {
-  pub email: String,
-  pub token: String,
-  pub exp: i64,
-}
-
 #[derive(Clone, Serialize, Deserialize, Debug, Validate, Default)]
 #[allow(clippy::module_name_repetitions)]
 pub struct UpdateUserDto {

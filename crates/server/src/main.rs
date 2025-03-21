@@ -6,21 +6,14 @@ pub(crate) mod logger;
 pub(crate) mod router;
 pub(crate) mod services;
 
-use std::sync::Arc;
-
 use anyhow::{Context, Result};
 use app::ApplicationServer;
-use clap::Parser;
-use dotenvy::dotenv;
-use utils::AppConfig;
+use utils::config;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
-  dotenv().ok();
-
-  let config = Arc::new(AppConfig::parse());
-
-  ApplicationServer::serve(config)
+  config::init();
+  ApplicationServer::serve()
     .await
     .context("Failed to start server")?;
 

@@ -49,3 +49,5 @@ data
 
 .vscode/
 .idea/
+
+config.toml

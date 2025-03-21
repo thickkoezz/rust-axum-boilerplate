@@ -1,21 +1,20 @@
+use crate::services::Services;
+use crate::{logger::Logger, router::AppRouter};
 use anyhow::Context;
 use axum::serve;
 use database::Database;
-use std::sync::Arc;
 use tokio::signal;
 use tracing::info;
-use utils::AppConfig;
-
-use crate::services::Services;
-use crate::{logger::Logger, router::AppRouter};
+use utils::config;
 
 pub struct ApplicationServer;
 
 impl ApplicationServer {
-  pub async fn serve(config: Arc<AppConfig>) -> anyhow::Result<()> {
-    let _guard = Logger::init(config.cargo_env);
+  pub async fn serve() -> anyhow::Result<()> {
+    let cfg = config::get();
+    let _guard = Logger::init();
 
-    let address = format!("{}:{}", config.app_host, config.app_port);
+    let address = format!("{}:{}", cfg.app_host, cfg.app_port);
     let tcp_listener = tokio::net::TcpListener::bind(address)
       .await
       .context("Failed to bind TCP listener")?;
@@ -26,8 +25,8 @@ impl ApplicationServer {
 
     info!("server has launched on {local_addr} 🚀");
 
-    let db = Database::new(config.clone()).await?;
-    let services = Services::new(db, config);
+    let db = Database::new().await?;
+    let services = Services::new(db);
     let router = AppRouter::init(services);
 
     serve(tcp_listener, router)

@@ -1,6 +1,4 @@
-use crate::dtos::user_dto::{
-  ChangePasswordDto, LoginInDto, LoginOutDto, SignUpUserDto, UpdateUserDto,
-};
+use crate::dtos::user_dto::{ChangePasswordDto, LoginInDto, SignUpUserDto, UpdateUserDto};
 use async_trait::async_trait;
 use axum_extra::headers::Cookie;
 use database::user::{model::User, repository::DynUserRepository};
@@ -8,7 +6,7 @@ use mongodb::results::{DeleteResult, InsertOneResult, UpdateResult};
 use std::sync::Arc;
 use tracing::{error, info};
 use utils::{
-  AppConfig, AppError, AppResult, cookie,
+  AppError, AppResult, config, cookie,
   jwt::{create_token, decode_token},
   password::{hash_password, verify_password},
 };
@@ -21,7 +19,7 @@ pub type DynUserService = Arc<dyn UserServiceTrait + Send + Sync>;
 pub trait UserServiceTrait {
   async fn signup_user(&self, request: SignUpUserDto) -> AppResult<InsertOneResult>;
 
-  async fn login_user(&self, request: LoginInDto) -> AppResult<(LoginOutDto, cookie::Cookie)>;
+  async fn login_user(&self, request: LoginInDto) -> AppResult<(String, cookie::Cookie)>;
 
   async fn get_all_users(&self, cookie: Cookie) -> AppResult<Vec<User>>;
 
@@ -43,12 +41,11 @@ pub trait UserServiceTrait {
 #[derive(Clone)]
 pub struct UserService {
   repository: DynUserRepository,
-  config: Arc<AppConfig>,
 }
 
 impl UserService {
-  pub fn new(repository: DynUserRepository, config: Arc<AppConfig>) -> Self {
-    Self { repository, config }
+  pub fn new(repository: DynUserRepository) -> Self {
+    Self { repository }
   }
 }
 
@@ -74,7 +71,8 @@ impl UserServiceTrait for UserService {
     Ok(result)
   }
 
-  async fn login_user(&self, request: LoginInDto) -> AppResult<(LoginOutDto, cookie::Cookie)> {
+  async fn login_user(&self, request: LoginInDto) -> AppResult<(String, cookie::Cookie)> {
+    let cfg = config::get();
     let email = request.email.unwrap();
     let password = request.password.unwrap();
 
@@ -88,32 +86,26 @@ impl UserServiceTrait for UserService {
     }
 
     let user = existing_user.unwrap();
-    println!("password: {:?}", &password);
-    println!("user.password: {:?}", &user);
     if verify_password(&password, &user.password).is_err() {
       error!("invalid password for user {:?}", email);
       return Err(AppError::Unauthorized);
     }
 
-    let (token, exp) = create_token(
-      &self.config.jwt_secret,
+    let token = create_token(
+      &cfg.jwt.access_token_secret,
       &user.email,
-      self.config.jwt_expiration,
+      cfg.jwt.access_token_expiry,
     );
-    let odata = LoginOutDto {
-      email: user.email,
-      token: token.clone(),
-      exp,
-    };
+    let cookie = cookie::create(token.clone());
 
-    let cookie = cookie::create(token);
     info!("user {:?} logged in", email);
-    Ok((odata, cookie))
+    Ok((token, cookie))
   }
 
   async fn get_all_users(&self, cookie: Cookie) -> AppResult<Vec<User>> {
+    let cfg = config::get();
     if let Some(jwt_token) = cookie.get("jwt_token") {
-      if decode_token(&jwt_token, &self.config.jwt_secret).is_err() {
+      if decode_token(&jwt_token, &cfg.jwt.access_token_secret).is_err() {
         error!("can't decode token");
         return Err(AppError::Unauthorized);
       }
@@ -127,8 +119,9 @@ impl UserServiceTrait for UserService {
   }
 
   async fn get_user_by_id(&self, cookie: Cookie, user_id: &str) -> AppResult<Option<User>> {
+    let cfg = config::get();
     if let Some(jwt_token) = cookie.get("jwt_token") {
-      if decode_token(&jwt_token, &self.config.jwt_secret).is_err() {
+      if decode_token(&jwt_token, &cfg.jwt.access_token_secret).is_err() {
         error!("can't decode token");
         return Err(AppError::Unauthorized);
       }
@@ -142,8 +135,9 @@ impl UserServiceTrait for UserService {
   }
 
   async fn get_user_by_email(&self, cookie: Cookie, email: &str) -> AppResult<Option<User>> {
+    let cfg = config::get();
     if let Some(jwt_token) = cookie.get("jwt_token") {
-      if decode_token(&jwt_token, &self.config.jwt_secret).is_err() {
+      if decode_token(&jwt_token, &cfg.jwt.access_token_secret).is_err() {
         error!("can't decode token");
         return Err(AppError::Unauthorized);
       }
@@ -157,8 +151,9 @@ impl UserServiceTrait for UserService {
   }
 
   async fn update_user(&self, cookie: Cookie, request: UpdateUserDto) -> AppResult<UpdateResult> {
+    let cfg = config::get();
     if let Some(jwt_token) = cookie.get("jwt_token") {
-      if decode_token(&jwt_token, &self.config.jwt_secret).is_err() {
+      if decode_token(&jwt_token, &cfg.jwt.access_token_secret).is_err() {
         error!("can't decode token");
         return Err(AppError::Unauthorized);
       }
@@ -190,8 +185,9 @@ impl UserServiceTrait for UserService {
     cookie: Cookie,
     request: ChangePasswordDto,
   ) -> AppResult<UpdateResult> {
+    let cfg = config::get();
     if let Some(jwt_token) = cookie.get("jwt_token") {
-      if decode_token(&jwt_token, &self.config.jwt_secret).is_err() {
+      if decode_token(&jwt_token, &cfg.jwt.access_token_secret).is_err() {
         error!("can't decode token");
         return Err(AppError::Unauthorized);
       }
@@ -210,8 +206,9 @@ impl UserServiceTrait for UserService {
   }
 
   async fn delete_user(&self, cookie: Cookie, user_id: &str) -> AppResult<DeleteResult> {
+    let cfg = config::get();
     if let Some(jwt_token) = cookie.get("jwt_token") {
-      if decode_token(&jwt_token, &self.config.jwt_secret).is_err() {
+      if decode_token(&jwt_token, &cfg.jwt.access_token_secret).is_err() {
         error!("can't decode token");
         return Err(AppError::Unauthorized);
       }

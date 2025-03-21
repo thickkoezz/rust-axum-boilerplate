@@ -11,7 +11,7 @@ This project is a boilerplate for building a Rust application server using the [
 - [x] Router: A router for mapping requests to handlers, cors, and static files.
 - [x] Static: Static file serving using `tower-http`.
 - [x] Extractors: Validation extractor for getting data from requests and validate with `validator` crate.
-- [x] App config (dotenvy): Load your application's configuration from a `.env` file.
+- [x] App config (figment): Load your application's configuration from a `config.toml` file.
 - [x] Server Metrics with Prometheus using `axum-prometheus`. If you run in localhost, you can access the dashboard at [localhost:9091](http://localhost:9091).
 - [x] Hashing: Password hashing
 - [x] JWT utils: Utilities for working with JWTs.

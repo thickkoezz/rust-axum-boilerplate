@@ -21,21 +21,17 @@ pub trait UserServiceTrait {
 
   async fn login_user(&self, request: LoginInDto) -> AppResult<(String, cookie::Cookie)>;
 
-  async fn get_all_users(&self, cookie: Cookie) -> AppResult<Vec<User>>;
+  async fn get_all_users(&self) -> AppResult<Vec<User>>;
 
-  async fn get_user_by_id(&self, cookie: Cookie, user_id: &str) -> AppResult<Option<User>>;
+  async fn get_user_by_id(&self, user_id: &str) -> AppResult<Option<User>>;
 
-  async fn get_user_by_email(&self, cookie: Cookie, user_id: &str) -> AppResult<Option<User>>;
+  async fn get_user_by_email(&self, user_id: &str) -> AppResult<Option<User>>;
 
-  async fn update_user(&self, cookie: Cookie, request: UpdateUserDto) -> AppResult<UpdateResult>;
+  async fn update_user(&self, request: UpdateUserDto) -> AppResult<UpdateResult>;
 
-  async fn change_password(
-    &self,
-    cookie: Cookie,
-    request: ChangePasswordDto,
-  ) -> AppResult<UpdateResult>;
+  async fn change_password(&self, request: ChangePasswordDto) -> AppResult<UpdateResult>;
 
-  async fn delete_user(&self, cookie: Cookie, user_id: &str) -> AppResult<DeleteResult>;
+  async fn delete_user(&self, user_id: &str) -> AppResult<DeleteResult>;
 }
 
 #[derive(Clone)]
@@ -102,122 +98,49 @@ impl UserServiceTrait for UserService {
     Ok((token, cookie))
   }
 
-  async fn get_all_users(&self, cookie: Cookie) -> AppResult<Vec<User>> {
-    let cfg = config::get();
-    if let Some(jwt_token) = cookie.get("jwt_token") {
-      if decode_token(&jwt_token, &cfg.jwt.access_token_secret).is_err() {
-        error!("can't decode token");
-        return Err(AppError::Unauthorized);
-      }
-
-      let users = self.repository.get_all_users().await?;
-      return Ok(users);
-    }
-
-    error!("token not found in cookie");
-    Err(AppError::Unauthorized)
+  async fn get_all_users(&self) -> AppResult<Vec<User>> {
+    let users = self.repository.get_all_users().await?;
+    Ok(users)
   }
 
-  async fn get_user_by_id(&self, cookie: Cookie, user_id: &str) -> AppResult<Option<User>> {
-    let cfg = config::get();
-    if let Some(jwt_token) = cookie.get("jwt_token") {
-      if decode_token(&jwt_token, &cfg.jwt.access_token_secret).is_err() {
-        error!("can't decode token");
-        return Err(AppError::Unauthorized);
-      }
-
-      let user = self.repository.get_user_by_id(user_id).await?;
-      return Ok(user);
-    }
-
-    error!("token not found in cookie");
-    Err(AppError::Unauthorized)
+  async fn get_user_by_id(&self, user_id: &str) -> AppResult<Option<User>> {
+    let user = self.repository.get_user_by_id(user_id).await?;
+    Ok(user)
   }
 
-  async fn get_user_by_email(&self, cookie: Cookie, email: &str) -> AppResult<Option<User>> {
-    let cfg = config::get();
-    if let Some(jwt_token) = cookie.get("jwt_token") {
-      if decode_token(&jwt_token, &cfg.jwt.access_token_secret).is_err() {
-        error!("can't decode token");
-        return Err(AppError::Unauthorized);
-      }
-
-      let user = self.repository.get_user_by_email(email).await?;
-      return Ok(user);
-    }
-
-    error!("token not found in cookie");
-    Err(AppError::Unauthorized)
+  async fn get_user_by_email(&self, email: &str) -> AppResult<Option<User>> {
+    let user = self.repository.get_user_by_email(email).await?;
+    Ok(user)
   }
 
-  async fn update_user(&self, cookie: Cookie, request: UpdateUserDto) -> AppResult<UpdateResult> {
-    let cfg = config::get();
-    if let Some(jwt_token) = cookie.get("jwt_token") {
-      if decode_token(&jwt_token, &cfg.jwt.access_token_secret).is_err() {
-        error!("can't decode token");
-        return Err(AppError::Unauthorized);
+  async fn update_user(&self, request: UpdateUserDto) -> AppResult<UpdateResult> {
+    let id = request.id.unwrap();
+    let email = request.email.unwrap();
+    let name = request.name.unwrap();
+    let existing_user = self.repository.get_user_by_email(&email).await?;
+    if existing_user.is_some() {
+      let existing_id = existing_user.unwrap().id.unwrap().to_hex();
+      if existing_id != id {
+        error!("user {:?} already exists", email);
+        return Err(AppError::Conflict(format!("email {email} is taken")));
       }
-
-      let id = request.id.unwrap();
-      let email = request.email.unwrap();
-      let name = request.name.unwrap();
-
-      let existing_user = self.repository.get_user_by_email(&email).await?;
-      if existing_user.is_some() {
-        let existing_id = existing_user.unwrap().id.unwrap().to_hex();
-        if existing_id != id {
-          error!("user {:?} already exists", email);
-          return Err(AppError::Conflict(format!("email {email} is taken")));
-        }
-      }
-
-      let result = self.repository.update_user(&id, &name, &email).await?;
-      info!("updated user {:?}", result);
-      return Ok(result);
     }
-
-    error!("token not found in cookie");
-    Err(AppError::Unauthorized)
+    let result = self.repository.update_user(&id, &name, &email).await?;
+    info!("updated user {:?}", result);
+    Ok(result)
   }
 
-  async fn change_password(
-    &self,
-    cookie: Cookie,
-    request: ChangePasswordDto,
-  ) -> AppResult<UpdateResult> {
-    let cfg = config::get();
-    if let Some(jwt_token) = cookie.get("jwt_token") {
-      if decode_token(&jwt_token, &cfg.jwt.access_token_secret).is_err() {
-        error!("can't decode token");
-        return Err(AppError::Unauthorized);
-      }
-
-      let id = request.id.unwrap();
-      let password = request.password.unwrap();
-      let password = hash_password(&password)?;
-
-      let result = self.repository.change_password(&id, &password).await?;
-      info!("updated user {:?}", result);
-      return Ok(result);
-    }
-
-    error!("token not found in cookie");
-    Err(AppError::Unauthorized)
+  async fn change_password(&self, request: ChangePasswordDto) -> AppResult<UpdateResult> {
+    let id = request.id.unwrap();
+    let password = request.password.unwrap();
+    let password = hash_password(&password)?;
+    let result = self.repository.change_password(&id, &password).await?;
+    info!("updated user {:?}", result);
+    Ok(result)
   }
 
-  async fn delete_user(&self, cookie: Cookie, user_id: &str) -> AppResult<DeleteResult> {
-    let cfg = config::get();
-    if let Some(jwt_token) = cookie.get("jwt_token") {
-      if decode_token(&jwt_token, &cfg.jwt.access_token_secret).is_err() {
-        error!("can't decode token");
-        return Err(AppError::Unauthorized);
-      }
-
-      let result = self.repository.delete_user(user_id).await?;
-      return Ok(result);
-    }
-
-    error!("token not found in cookie");
-    Err(AppError::Unauthorized)
+  async fn delete_user(&self, user_id: &str) -> AppResult<DeleteResult> {
+    let result = self.repository.delete_user(user_id).await?;
+    Ok(result)
   }
 }

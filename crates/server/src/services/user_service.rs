@@ -1,13 +1,12 @@
 use crate::dtos::user_dto::{ChangePasswordDto, LoginInDto, SignUpUserDto, UpdateUserDto};
 use async_trait::async_trait;
-use axum_extra::headers::Cookie;
 use database::user::{model::User, repository::DynUserRepository};
 use mongodb::results::{DeleteResult, InsertOneResult, UpdateResult};
 use std::sync::Arc;
 use tracing::{error, info};
 use utils::{
   AppError, AppResult, config, cookie,
-  jwt::{create_token, decode_token},
+  jwt::create_token,
   password::{hash_password, verify_password},
 };
 

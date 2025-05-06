@@ -8,24 +8,24 @@ resolver = "2"
 anyhow = "1.0.86"
 argon2 = "0.5.3"
 async-trait = "0.1.81"
-axum = { version = "0.7.7", features = ["macros"] }
-axum-extra = { version =  "0.9.4", features = ["cookie", "typed-header"] }
+axum = { version = "0.7.9", features = ["macros"] }
+axum-extra = { version =  "0.9.6", features = ["cookie", "typed-header"] }
 figment = { version = "0.10.19", features = ["env", "toml"] }
 clap = { version = "4.5.9", features = ["env", "derive"] }
 cookie = "0.18.1"
 jsonwebtoken = "9.3.1"
 lazy_static = "1.5.0"
 mongodb = { version = "3.0.1" }
-rand = "0.8.5"
+rand = "0.9.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.120"
 time = "0.3.36"
-thiserror = "1.0.62"
-tokio = { version = "1", features = ["full"] }
+thiserror = "2.0.12"
+tokio = { version = "1.45.0", features = ["full"] }
 tokio-stream = { version = "0.1.15" }
-tower = { version = "0.4.13", features = ["timeout", "buffer", "limit"] }
-tower-http = { version = "0.5.2", features = ["fs", "trace", "cors"] }
+tower = { version = "0.5.2", features = ["timeout", "buffer", "limit"] }
+tower-http = { version = "0.6.2", features = ["fs", "trace", "cors"] }
 tracing = { version = "0.1.40" }
 tracing-appender = "0.2.3"
 tracing-subscriber = { version = "0.3.19", features = ["std", "fmt", "env-filter", "tracing-log", "time", "local-time", "json" ]}
-validator = { version = "0.18.1", features = ["derive"] }
+validator = { version = "0.20.0", features = ["derive"] }

@@ -1,4 +1,8 @@
-use argon2::{Argon2, PasswordHash, password_hash::SaltString};
+use argon2::{
+  Argon2, PasswordHash,
+  password_hash::{SaltString, rand_core::OsRng},
+};
+use core::str;
 
 pub fn verify_password(password: &str, password_hash: &str) -> anyhow::Result<()> {
   let hash = PasswordHash::new(&password_hash)
@@ -11,7 +15,7 @@ pub fn verify_password(password: &str, password_hash: &str) -> anyhow::Result<()
 }
 
 pub fn hash_password(password: &str) -> anyhow::Result<String> {
-  let salt = SaltString::generate(rand::thread_rng());
+  let salt = SaltString::generate(&mut OsRng);
   Ok(
     PasswordHash::generate(Argon2::default(), password, &salt)
       .map_err(|e| anyhow::anyhow!("failed to generate password hash: {}", e))?

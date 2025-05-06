@@ -76,24 +76,25 @@ impl AppError {
 
     for (field_property, error_kind) in errors.into_errors() {
       if let ValidationErrorsKind::Field(field_meta) = error_kind.clone() {
+        let field_property_str = field_property.to_string();
+        let value = Cow::from(field_property_str.clone());
+        let entry = validation_errors.entry(value).or_default();
         for error in field_meta {
-          validation_errors
-            .entry(Cow::from(field_property))
-            .or_default()
-            .push(error.message.unwrap_or_else(|| {
-              let params: Vec<Cow<'static, str>> = error
-                .params
-                .iter()
-                .filter(|(key, _value)| *key != "value")
-                .map(|(key, value)| Cow::from(format!("{key} value is {value}")))
-                .collect();
+          let field_property_clone = field_property_str.clone();
+          entry.push(error.message.unwrap_or_else(|| {
+            let params: Vec<Cow<'static, str>> = error
+              .params
+              .iter()
+              .filter(|(key, _value)| *key != "value")
+              .map(|(key, value)| Cow::from(format!("{key} value is {value}")))
+              .collect();
 
-              if params.is_empty() {
-                Cow::from(format!("{field_property} is required"))
-              } else {
-                Cow::from(params.join(", "))
-              }
-            }));
+            if params.is_empty() {
+              Cow::from(format!("{field_property_clone} is required"))
+            } else {
+              Cow::from(params.join(", "))
+            }
+          }));
         }
       }
     }

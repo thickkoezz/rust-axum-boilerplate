@@ -15,7 +15,7 @@ This project is a boilerplate for building a Rust application server using the [
 - [x] Server Metrics with Prometheus using `axum-prometheus`. If you run in localhost, you can access the dashboard at [localhost:9091](http://localhost:9091).
 - [x] Hashing: Password hashing
 - [x] JWT utils: Utilities for working with JWTs.
-- [x] Authentication: User authentication system.
+- [x] Authentication: User authentication system. Uses both access token and refresh token to avoid unnecessary user re-login and refresh the access token when it is expired.
 
 ## Possible Planned Features
 - [ ] Tests: Add tests for the application.

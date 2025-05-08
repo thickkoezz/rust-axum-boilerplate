@@ -1,0 +1,22 @@
+meta {
+  name: users
+  type: http
+  seq: 6
+}
+
+get {
+  url: http://localhost:5000/api/v1/users
+  body: none
+  auth: inherit
+}
+
+headers {
+  Cookie: access_token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtaWtpMjExMjg3QGdtYWlsLmNvbSIsImV4cCI6MTc0NjY4MDQzNywidG9rZW5fdHlwZSI6IkFjY2VzcyJ9.M6hltF-adWcyfLzRA3lU5sFEoTnV2xzTurNetiwti28
+}
+
+body:json {
+  {
+    "email": "miki211287@gmail.com",
+    "password": "123456"
+  }
+}

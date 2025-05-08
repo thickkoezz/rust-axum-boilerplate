@@ -1,0 +1,21 @@
+meta {
+  name: refresh-token
+  type: http
+  seq: 6
+}
+
+post {
+  url: http://localhost:5000/api/v1/users/refresh-token
+  body: none
+  auth: inherit
+}
+
+headers {
+  Cookie: refresh_token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtaWtpMjExMjg3QGdtYWlsLmNvbSIsImV4cCI6MTc0NzI4NDkwMSwidG9rZW5fdHlwZSI6IlJlZnJlc2gifQ.8bwKsSUxuI3VVMXCHNXjm8nsPw3JRa6_D6snE0hhL3g
+}
+
+body:json {
+  {
+    "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtaWtpMjExMjg3QGdtYWlsLmNvbSIsImV4cCI6MTc0NzI4NDkwMSwidG9rZW5fdHlwZSI6IlJlZnJlc2gifQ.8bwKsSUxuI3VVMXCHNXjm8nsPw3JRa6_D6snE0hhL3g"
+  }
+}

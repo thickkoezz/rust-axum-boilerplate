@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use validator::Validate;
 
-pub(crate) mod user_dto;
+pub mod user_dto;
 
 #[derive(Clone, Deserialize, Debug, Validate, Default)]
 #[allow(clippy::module_name_repetitions)]

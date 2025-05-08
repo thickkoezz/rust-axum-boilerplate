@@ -13,3 +13,9 @@ pub struct User {
   #[validate(length(min = 6))]
   pub password: String,
 }
+
+#[derive(Debug, Serialize)]
+pub struct LoginResponse {
+  pub access_token: String,
+  pub refresh_token: String,
+}

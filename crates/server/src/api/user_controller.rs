@@ -10,14 +10,17 @@ use crate::{
 use axum::{
   Extension, Json, Router,
   body::Body,
-  http::{StatusCode, header::SET_COOKIE},
+  http::{
+    HeaderMap, StatusCode,
+    header::{COOKIE, SET_COOKIE},
+  },
   middleware::from_fn,
   response::IntoResponse,
   routing::{delete, get, post, put},
 };
-use database::user::model::User;
+use database::user::model::{LoginResponse, User};
 use mongodb::results::{DeleteResult, InsertOneResult, UpdateResult};
-use utils::{AppResult, cookie};
+use utils::{AppResult, cookie::Cookie};
 
 pub struct UserController;
 
@@ -26,7 +29,8 @@ impl UserController {
     let unprotected = Router::new()
       .route("/signup", post(Self::signup))
       .route("/login", post(Self::login))
-      .route("/logout", get(Self::logout));
+      .route("/logout", get(Self::logout))
+      .route("/refresh-token", post(Self::refresh_token));
     let protected = Router::new()
       .route("/", get(Self::get_all))
       .route("/get", get(Self::get_by_id))
@@ -50,20 +54,71 @@ impl UserController {
     Extension(services): Extension<Services>,
     ValidationExtractor(req): ValidationExtractor<LoginInDto>,
   ) -> AppResult<impl IntoResponse> {
-    let (odata, cookie) = services.user.login_user(req).await?;
-    let mut response = Json(odata).into_response();
+    let (access_token, access_cookie, refresh_token, refresh_cookie) =
+      services.user.login_user(req).await?;
+    let login_response = LoginResponse {
+      access_token,
+      refresh_token,
+    };
+    let mut response = Json(login_response).into_response();
+
     response
       .headers_mut()
-      .insert(SET_COOKIE, cookie.to_string().parse().unwrap());
+      .insert(SET_COOKIE, access_cookie.to_string().parse().unwrap());
+    response
+      .headers_mut()
+      .append(SET_COOKIE, refresh_cookie.to_string().parse().unwrap());
     Ok(response)
   }
 
-  pub async fn logout() -> AppResult<impl IntoResponse> {
-    let cookie = cookie::delete();
+  pub async fn logout(Extension(services): Extension<Services>) -> AppResult<impl IntoResponse> {
+    let (access_cookie, refresh_cookie) = services.user.logout_user().await?;
     let mut response = StatusCode::OK.into_response();
     response
       .headers_mut()
-      .insert(SET_COOKIE, cookie.to_string().parse().unwrap());
+      .insert(SET_COOKIE, access_cookie.to_string().parse().unwrap());
+    response
+      .headers_mut()
+      .append(SET_COOKIE, refresh_cookie.to_string().parse().unwrap());
+    Ok(response)
+  }
+
+  pub async fn refresh_token(
+    Extension(services): Extension<Services>,
+    headers: HeaderMap,
+  ) -> AppResult<impl IntoResponse> {
+    let cookie_header = headers
+      .get(COOKIE)
+      .and_then(|value| value.to_str().ok())
+      .unwrap_or("");
+
+    let mut refresh_token_value = None;
+    for cookie_str in cookie_header.split(';') {
+      if let Ok(cookie) = Cookie::parse_encoded(cookie_str.trim()) {
+        if cookie.name() == "refresh_token" {
+          refresh_token_value = Some(cookie.value().to_string());
+          break;
+        }
+      }
+    }
+
+    let refresh_token = refresh_token_value.ok_or_else(|| {
+      utils::errors::AppError::BadRequest("Missing refresh token cookie".to_string())
+    })?;
+    let (access_token, access_cookie, refresh_token, refresh_cookie) =
+      services.user.refresh_access_token(refresh_token).await?;
+    let login_response = LoginResponse {
+      access_token,
+      refresh_token,
+    };
+    let mut response = Json(login_response).into_response();
+
+    response
+      .headers_mut()
+      .insert(SET_COOKIE, access_cookie.to_string().parse().unwrap());
+    response
+      .headers_mut()
+      .append(SET_COOKIE, refresh_cookie.to_string().parse().unwrap());
     Ok(response)
   }
 

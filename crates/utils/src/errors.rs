@@ -43,6 +43,8 @@ pub enum AppError {
   #[error("{0}")]
   Conflict(String),
   #[error("{0}")]
+  InvalidToken(String),
+  #[error("{0}")]
   PreconditionFailed(String),
   #[error(transparent)]
   AxumJsonRejection(#[from] JsonRejection),
@@ -120,6 +122,7 @@ impl IntoResponse for AppError {
       Self::Conflict(err) => (StatusCode::CONFLICT, err),
       Self::PreconditionFailed(err) => (StatusCode::PRECONDITION_FAILED, err),
       Self::BadRequest(err) => (StatusCode::BAD_REQUEST, err),
+      Self::InvalidToken(err) => (StatusCode::UNAUTHORIZED, err), // Changed to return message directly
       Self::Unauthorized => (StatusCode::UNAUTHORIZED, Self::Unauthorized.to_string()),
       Self::Forbidden => (StatusCode::FORBIDDEN, Self::Forbidden.to_string()),
       Self::AxumJsonRejection(err) => (StatusCode::BAD_REQUEST, err.body_text()),

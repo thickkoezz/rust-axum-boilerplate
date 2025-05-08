@@ -6,7 +6,7 @@ use std::sync::Arc;
 use tracing::{error, info};
 use utils::{
   AppError, AppResult, config, cookie,
-  jwt::create_token,
+  jwt::{TokenType, create_token},
   password::{hash_password, verify_password},
 };
 
@@ -18,7 +18,15 @@ pub type DynUserService = Arc<dyn UserServiceTrait + Send + Sync>;
 pub trait UserServiceTrait {
   async fn signup_user(&self, request: SignUpUserDto) -> AppResult<InsertOneResult>;
 
-  async fn login_user(&self, request: LoginInDto) -> AppResult<(String, cookie::Cookie)>;
+  async fn login_user(
+    &self,
+    request: LoginInDto,
+  ) -> AppResult<(String, cookie::Cookie, String, cookie::Cookie)>;
+
+  async fn refresh_access_token(
+    &self,
+    refresh_token: String,
+  ) -> AppResult<(String, cookie::Cookie, String, cookie::Cookie)>;
 
   async fn get_all_users(&self) -> AppResult<Vec<User>>;
 
@@ -31,6 +39,8 @@ pub trait UserServiceTrait {
   async fn change_password(&self, request: ChangePasswordDto) -> AppResult<UpdateResult>;
 
   async fn delete_user(&self, user_id: &str) -> AppResult<DeleteResult>;
+
+  async fn logout_user(&self) -> AppResult<(cookie::Cookie, cookie::Cookie)>;
 }
 
 #[derive(Clone)]
@@ -66,7 +76,10 @@ impl UserServiceTrait for UserService {
     Ok(result)
   }
 
-  async fn login_user(&self, request: LoginInDto) -> AppResult<(String, cookie::Cookie)> {
+  async fn login_user(
+    &self,
+    request: LoginInDto,
+  ) -> AppResult<(String, cookie::Cookie, String, cookie::Cookie)> {
     let cfg = config::get();
     let email = request.email.unwrap();
     let password = request.password.unwrap();
@@ -86,15 +99,80 @@ impl UserServiceTrait for UserService {
       return Err(AppError::Unauthorized);
     }
 
-    let token = create_token(
+    let access_token = create_token(
       &cfg.jwt.access_token_secret,
       &user.email,
       cfg.jwt.access_token_expiry,
+      TokenType::Access,
     );
-    let cookie = cookie::create(token.clone());
+
+    let access_cookie = cookie::create(
+      "access_token",
+      access_token.clone(),
+      cfg.jwt.access_token_expiry,
+    );
+
+    let refresh_token = create_token(
+      &cfg.jwt.refresh_token_secret,
+      &user.email,
+      cfg.jwt.refresh_token_expiry,
+      TokenType::Refresh,
+    );
+
+    let refresh_cookie = cookie::create(
+      "refresh_token",
+      refresh_token.clone(),
+      cfg.jwt.refresh_token_expiry,
+    );
 
     info!("user {:?} logged in", email);
-    Ok((token, cookie))
+    Ok((access_token, access_cookie, refresh_token, refresh_cookie))
+  }
+
+  async fn refresh_access_token(
+    &self,
+    refresh_token: String,
+  ) -> AppResult<(String, cookie::Cookie, String, cookie::Cookie)> {
+    let cfg = config::get();
+    let claims = utils::jwt::decode_token(&refresh_token, &cfg.jwt.refresh_token_secret)?;
+    if claims.token_type != utils::jwt::TokenType::Refresh {
+      return Err(AppError::InvalidToken("Not a refresh token".to_string()));
+    }
+
+    let user = self
+      .repository
+      .get_user_by_email(&claims.sub)
+      .await?
+      .ok_or_else(|| AppError::NotFound("User not found".to_string()))?;
+
+    let access_token = create_token(
+      &cfg.jwt.access_token_secret,
+      &user.email,
+      cfg.jwt.access_token_expiry,
+      TokenType::Access,
+    );
+
+    let refresh_token = create_token(
+      &cfg.jwt.refresh_token_secret,
+      &user.email,
+      cfg.jwt.refresh_token_expiry,
+      TokenType::Refresh,
+    );
+
+    let access_cookie = cookie::create(
+      "access_token",
+      access_token.clone(),
+      cfg.jwt.access_token_expiry,
+    );
+
+    let refresh_cookie = cookie::create(
+      "refresh_token",
+      refresh_token.clone(),
+      cfg.jwt.refresh_token_expiry,
+    );
+
+    info!("user {:?} refreshed access token", user.email);
+    Ok((access_token, access_cookie, refresh_token, refresh_cookie))
   }
 
   async fn get_all_users(&self) -> AppResult<Vec<User>> {
@@ -117,6 +195,7 @@ impl UserServiceTrait for UserService {
     let email = request.email.unwrap();
     let name = request.name.unwrap();
     let existing_user = self.repository.get_user_by_email(&email).await?;
+
     if existing_user.is_some() {
       let existing_id = existing_user.unwrap().id.unwrap().to_hex();
       if existing_id != id {
@@ -124,6 +203,7 @@ impl UserServiceTrait for UserService {
         return Err(AppError::Conflict(format!("email {email} is taken")));
       }
     }
+
     let result = self.repository.update_user(&id, &name, &email).await?;
     info!("updated user {:?}", result);
     Ok(result)
@@ -141,5 +221,12 @@ impl UserServiceTrait for UserService {
   async fn delete_user(&self, user_id: &str) -> AppResult<DeleteResult> {
     let result = self.repository.delete_user(user_id).await?;
     Ok(result)
+  }
+
+  async fn logout_user(&self) -> AppResult<(cookie::Cookie, cookie::Cookie)> {
+    let access_cookie = cookie::delete("access_token");
+    let refresh_cookie = cookie::delete("refresh_token");
+    info!("user logged out");
+    Ok((access_cookie, refresh_cookie))
   }
 }

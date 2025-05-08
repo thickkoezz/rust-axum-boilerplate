@@ -28,8 +28,8 @@ async fn authenticate_user<B>(
 ) -> Result<Response, AppError> {
   let cfg = config::get();
 
-  if let Some(jwt_token) = cookie.get("jwt_token") {
-    if decode_token(&jwt_token, &cfg.jwt.access_token_secret).is_err() {
+  if let Some(access_token) = cookie.get("access_token") {
+    if decode_token(access_token, &cfg.jwt.access_token_secret).is_err() {
       error!("can't decode token");
       return Err(AppError::Unauthorized);
     }

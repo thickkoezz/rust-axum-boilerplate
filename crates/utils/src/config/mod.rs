@@ -26,13 +26,16 @@ pub fn init() {
       exit(1);
     }
   };
+
   if config.db.uri.is_empty() {
     config.db.uri = std::env::var("DATABASE_URI").unwrap_or_default();
   }
+
   if config.db.uri.is_empty() {
     eprintln!("DATABASE_URI is not set");
     exit(1);
   }
+
   CONFIG.set(config).expect("config should be set");
 }
 
